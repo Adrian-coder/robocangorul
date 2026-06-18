@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instrucțiuni RoboCangurul</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #eef2ff, #f8fafc, #fff7ed);
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .container {
+            width: 100%;
+            max-width: 1050px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+        .header {
+            background: linear-gradient(135deg, #4f46e5, #2563eb);
+            color: white;
+            padding: 28px;
+            display: flex;
+            align-items: center;
+            gap: 22px;
+        }
+        .robot {
+            width: 120px;
+            height: 120px;
+            background: white;
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 0 4px rgba(255,255,255,0.7), 0 12px 25px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+            padding: 8px;
+        }
+        .robot img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 34px;
+        }
+        .header p {
+            margin: 0;
+            font-size: 17px;
+            line-height: 1.45;
+            opacity: 0.95;
+        }
+        .content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1.35fr 0.85fr;
+            gap: 24px;
+        }
+        .card {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 22px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #312e81;
+            font-size: 23px;
+        }
+        h3 {
+            margin-bottom: 8px;
+            color: #1e40af;
+            font-size: 18px;
+        }
+        p, li {
+            font-size: 16px;
+            line-height: 1.55;
+        }
+        ul { padding-left: 22px; }
+        .codebox {
+            background: #111827;
+            color: #e5e7eb;
+            border-radius: 14px;
+            padding: 16px;
+            font-family: Consolas, monospace;
+            line-height: 1.65;
+            margin: 12px 0;
+            white-space: pre-line;
+        }
+        .command {
+            display: inline-block;
+            background: #eef2ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 2px 7px;
+            font-family: Consolas, monospace;
+            font-weight: bold;
+        }
+        .warning {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+            border-radius: 14px;
+            padding: 14px;
+            margin-top: 12px;
+            font-size: 15px;
+        }
+        .input-zone {
+            margin-top: 18px;
+            background: white;
+            border: 2px solid #c7d2fe;
+            border-radius: 18px;
+            padding: 18px;
+        }
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        button, a.btn {
+            text-decoration: none;
+            text-align: center;
+            border: none;
+            border-radius: 12px;
+            padding: 13px 14px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.12s, opacity 0.12s;
+            display: block;
+        }
+        button:hover, a.btn:hover { transform: translateY(-1px); opacity: 0.95; }
+        .primary { background: #4f46e5; color: white; }
+        .arena { background: #f59e0b; color: white; }
+        .three { background: #2563eb; color: white; }
+        .secondary { background: #e5e7eb; color: #374151; }
+        .small {
+            font-size: 14px;
+            color: #64748b;
+        }
+        @media (max-width: 850px) {
+            .content { grid-template-columns: 1fr; }
+            .header { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="robot"><img src="img1.png" alt="Logo RoboCangurul"></div>
+            <div>
+                <h1>Salut! sunt RoboCangurul</h1>
+                <p>Înainte de a începe, citește cu atenție instrucțiunile. Eu te voi ajuta să înveți comenzile, să te deplasezi pe teren, să lucrezi cu algoritmi și să rezolvi misiunile.</p>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="card">
+                <h2>Instrucțiuni pentru utilizator</h2>
+
+                <h3>1. Cum se scrie algoritmul</h3>
+                <p>În zona de cod, algoritmul începe cu <span class="command">BEGIN</span> și se termină cu <span class="command">END</span>. Comenzile se scriu între aceste două cuvinte.</p>
+                <div class="codebox">BEGIN
+Pas
+Pas
+Rotire
+Salt
+END</div>
+
+                <h3>2. Comenzile principale</h3>
+                <ul>
+                    <li><span class="command">Pas</span> — RoboCangurul se deplasează cu o celulă înainte.</li>
+                    <li><span class="command">Rotire</span> — RoboCangurul se rotește spre dreapta.</li>
+                    <li><span class="command">Salt</span> — RoboCangurul sare peste o celulă.</li>
+                    <li><span class="command">Repetă</span> — permite executarea aceleiași comenzi de mai multe ori.</li>
+                    <li><span class="command">Dacă</span> — permite luarea unei decizii în funcție de situație.</li>
+                </ul>
+
+                <h3>3. Cum poți interacționa</h3>
+                <ul>
+                    <li><b>Prin tastare:</b> scrii comenzile direct în editorul de cod.</li>
+                    <li><b>Prin butoane:</b> apeși <b>PAS</b>, <b>ROTIRE</b> sau <b>SALT</b>.</li>
+                    <li><b>Prin voce:</b> pornești microfonul și spui <b>pas</b>, <b>rotire</b>, <b>salt</b>, <b>execută</b> sau <b>șterge</b>.</li>
+                    <li><b>Prin gesturi:</b> pornești camera și arăți gestul potrivit.</li>
+                </ul>
+
+                <h3>4. Gesturi pentru deplasare</h3>
+                <ul>
+                    <li><b>Pumnul închis</b> — RoboCangurul execută comanda <span class="command">Pas</span> și se deplasează cu o celulă înainte.</li>
+                    <li><b>Palma deschisă</b> — RoboCangurul execută comanda <span class="command">Rotire</span> și se întoarce spre dreapta.</li>
+                    <li><b>Semnul Victory</b> — RoboCangurul execută comanda <span class="command">Salt</span> și sare peste o celulă.</li>
+                    <li><b>Like / degetul mare în sus</b> — pornește executarea algoritmului scris în editor.</li>
+                    <li><b>Dislike / degetul mare în jos</b> — resetează aplicația sau șterge comenzile.</li>
+                </ul>
+
+                <h3>5. Modurile aplicației</h3>
+                <ul>
+                    <li><b>Învățare</b> — exersezi liber comenzile.</li>
+                    <li><b>Joc</b> — rezolvi niveluri și trebuie să ajungi la țintă.</li>
+                    <li><b>RoboArena</b> — mod de competiție, cu timp și clasament.</li>
+                    <li><b>Mod 3D</b> — deplasare în spațiu pe axele X, Y și Z.</li>
+                </ul>
+
+            </div>
+
+            <div class="card">
+                <h2>Intrare în aplicație</h2>
+                <p>Alege modul în care dorești să lucrezi. După citirea instrucțiunilor, poți intra direct în aplicație.</p>
+
+                <div class="input-zone">
+                    <div class="buttons">
+                        <a class="btn primary" href="Cangorulv1.html">Intră în RoboCangurul 2D</a>
+                        <a class="btn arena" href="RoboCangurulDuel.html">Intră în RoboArena</a>
+                        <a class="btn three" href="RoboCangurul3D.html">Intră în Mod 3D</a>
+                        <button class="secondary" onclick="speakInstructions()">Ascultă instrucțiunea</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function speakInstructions() {
+            const text = 'Salut! Sunt RoboCangurul. Înainte de a începe, citește instrucțiunile. Algoritmul începe cu BEGIN și se termină cu END. Pentru deplasare poți folosi comenzile Pas, Rotire și Salt. Poți porni microfonul și spune pas, rotire, salt, execută sau șterge. Poți folosi și camera: pumnul închis înseamnă Pas și deplasare cu o celulă înainte, palma deschisă înseamnă Rotire spre dreapta, semnul Victory înseamnă Salt peste o celulă, like pornește executarea, iar dislike resetează aplicația.';
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ro-RO';
+            utterance.rate = 0.95;
+            window.speechSynthesis.speak(utterance);
+        }
+    </script>
+</body>
+</html>

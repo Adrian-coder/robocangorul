@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoboCangurul - RoboArena</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f3f4f6;
+            font-family: Arial, sans-serif;
+            color: #1f2937;
+        }
+
+        /* Stil simplu pentru butoane standard */
+        .btn-simplu {
+            background-color: #ffffff;
+            border: 1px solid #d1d5db;
+            color: #374151;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .btn-simplu:hover:not(:disabled) {
+            background-color: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .btn-simplu:active:not(:disabled) {
+            background-color: #f3f4f6;
+        }
+
+        /* Butonul principal de actiune */
+        .btn-albastru {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+        }
+
+        .btn-albastru:hover:not(:disabled) {
+            background-color: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+
+        /* Buton stergere sau iesire */
+        .btn-rosu {
+            color: #dc2626;
+            border-color: #fca5a5;
+        }
+
+        .btn-rosu:hover:not(:disabled) {
+            background-color: #fef2f2;
+            border-color: #ef4444;
+        }
+
+        /* Zona de text pentru cod */
+        textarea {
+            width: 100%;
+            height: 180px;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            background-color: #ffffff;
+            color: #111827;
+            resize: none;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+
+        textarea:disabled {
+            background-color: #f3f4f6;
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 mb-6 pb-4 border-b border-gray-300">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">RoboArena</h1>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <div id="registrationZone" class="flex gap-2">
+                <input type="text" id="playerName" placeholder="Scrie numele..." 
+                    class="border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:border-blue-500">
+                <button onclick="registerPlayer()" id="registerBtn" class="btn-simplu btn-albastru py-1.5 px-4">Salvează</button>
+            </div>
+            
+            <span id="welcomeMsg" class="hidden font-semibold text-sm text-gray-700 bg-gray-200 px-3 py-2 rounded-md"></span>
+            
+            <button onclick="startGame()" id="startBtn" disabled class="btn-simplu bg-green-600 text-white border-green-600 hover:bg-green-700 opacity-40 cursor-not-allowed">
+                Start Joc
+            </button>
+            <button onclick="resetApp()" class="btn-simplu">Reset</button>
+            <button onclick="exitGame()" class="btn-simplu btn-rosu">Iesire</button>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
+        
+        <div class="flex-1 bg-white border border-gray-300 rounded-lg p-4 relative flex flex-col items-center justify-center min-h-[400px]">
+            <div class="coord-badge absolute top-3 left-3 text-xs text-gray-500 font-mono">
+                Pozitie curenta: X:0 Y:0
+            </div>
+
+            <canvas id="gameCanvas" class="border border-gray-200 bg-white rounded"></canvas>
+            
+            <div id="gameInstruction" class="absolute bg-white border border-gray-300 p-4 rounded-md max-w-xs text-center shadow-sm">
+                <h3 class="font-bold text-gray-800 mb-1">Ghid de utilizare</h3>
+                <p class="text-xs text-gray-600 leading-normal">
+                    Scrie numele tau in casuta de sus si apasa Salveaza, apoi apasa Start Joc pentru a incepe exercitiul.
+                </p>
+            </div>
+
+            <div id="finishMsg" class="absolute hidden bg-green-100 border border-green-400 text-green-800 px-6 py-3 rounded-md font-bold text-sm">
+                Misiune finalizata cu succes!
+            </div>
+        </div>
+
+        <div class="w-full lg:w-[360px] flex flex-col gap-4">
+            
+            <div class="bg-white border border-gray-300 rounded-lg p-4 pt-6">
+                
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <button onclick="insert('PAS')" class="command-element btn-simplu text-xs py-2" disabled>PAS</button>
+                    <button onclick="insert('ROTIRE')" class="command-element btn-simplu text-xs py-2" disabled>ROTIRE</button>
+                    <button onclick="window.promptRepeat()" class="command-element btn-simplu text-xs py-2" disabled>REPETĂ</button>
+                    <button onclick="window.punctZero()" class="command-element btn-simplu text-xs py-2" disabled>CALIBRARE</button>
+                </div>
+
+                <textarea id="codeArea" disabled placeholder=""></textarea>
+                
+                <div class="grid grid-cols-3 gap-2 mt-3">
+                    <button id="runBtn" onclick="runCode()" disabled 
+                        class="col-span-2 btn-simplu btn-albastru text-xs py-2.5 opacity-40 cursor-not-allowed">
+                        Ruleaza Codul
+                    </button>
+                    <button onclick="window.clearCode()" class="btn-simplu btn-rosu text-xs py-2.5">Sterge</button>
+                </div>
+            </div>
+
+            <div class="bg-white border border-gray-300 rounded-lg p-3 flex justify-between items-center">
+                <span class="text-xs font-bold text-gray-500">Timp de executie:</span>
+                <span id="timer" class="font-mono text-lg font-bold text-gray-800">00:00.00</span>
+            </div>
+
+            <div class="bg-white border border-gray-300 rounded-lg p-4 flex-1 flex flex-col min-h-[180px]">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 pb-1 border-b border-gray-200">
+                    Top robocanguri
+                </h3>
+                <div id="leaderboard" class="flex-1 overflow-y-auto space-y-1.5">
+                    <p class="text-gray-400 text-xs italic text-center mt-4">Nu exista rezultate inregistrate.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let kang = { x: 2, y: 8, dir: 0 };
+        let startPos = { x: 2, y: 8 };
+        let target = null;
+        let points = [];
+        let timerStart, timerInterval, isDuelRunning = false;
+        let currentPlayerName = "";
+        let scores = JSON.parse(localStorage.getItem('duelScores') || '[]');
+
+        function initCanvas() {
+            const container = canvas.parentElement;
+            const size = Math.min(container.clientWidth, container.clientHeight) - 40;
+            canvas.width = size; canvas.height = size;
+            updateLeaderboard();
+            draw();
+        }
+
+        function exitGame() {
+            window.location.href = "Cangorulv1.html";
+        }
+
+        function registerPlayer() {
+            const nameInput = document.getElementById('playerName').value.trim();
+            if (!nameInput) return alert("Scrie un nume valid!");
+            
+            currentPlayerName = nameInput;
+            
+            document.getElementById('registrationZone').classList.add('hidden');
+            const welcome = document.getElementById('welcomeMsg');
+            welcome.innerText = `Utilizator: ${currentPlayerName}`;
+            welcome.classList.remove('hidden');
+
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+
+            document.getElementById('gameInstruction').innerHTML = `
+                <h3 class="font-bold text-gray-800 mb-1">Nume inregistrat</h3>
+                <p class="text-xs text-gray-600">
+                    Apasa pe butonul verde de sus <b>Start Joc</b> pentru a plasa obiectivul pe ecran.
+                </p>
+            `;
+        }
+
+        function enableControls(state) {
+            const elements = document.querySelectorAll('.command-element');
+            elements.forEach(el => el.disabled = !state);
+            document.getElementById('codeArea').disabled = !state;
+            document.getElementById('codeArea').placeholder = state ? "Scrie instructiunile aici..." : "";
+            
+            const runBtn = document.getElementById('runBtn');
+            runBtn.disabled = !state;
+            if (state) {
+                runBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+            } else {
+                runBtn.classList.add('opacity-40', 'cursor-not-allowed');
+            }
+        }
+
+        function startGame() {
+            if (!currentPlayerName) return;
+
+            document.getElementById('gameInstruction').classList.add('hidden');
+            document.getElementById('finishMsg').classList.add('hidden');
+
+            startPos = { x: Math.floor(Math.random()*3), y: 7+Math.floor(Math.random()*3) };
+            kang = { ...startPos, dir: 0 };
+            target = { x: 5+Math.floor(Math.random()*4), y: Math.floor(Math.random()*4) };
+            points = [{x: kang.x, y: kang.y}];
+            
+            isDuelRunning = true;
+            enableControls(true);
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('startBtn').classList.add('opacity-40', 'cursor-not-allowed');
+
+            timerStart = Date.now();
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const d = Date.now() - timerStart;
+                const ms = Math.floor((d%1000)/10).toString().padStart(2,'0');
+                const s = Math.floor((d/1000)%60).toString().padStart(2,'0');
+                const m = Math.floor(d/60000).toString().padStart(2,'0');
+                document.getElementById('timer').innerText = `${m}:${s}.${ms}`;
+            }, 10);
+
+            draw();
+        }
+
+        function draw() {
+            const cellSize = canvas.width / 10;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Grila simpla
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            for(let i=0; i<=10; i++) {
+                ctx.beginPath(); ctx.moveTo(i*cellSize, 0); ctx.lineTo(i*cellSize, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i*cellSize); ctx.lineTo(canvas.width, i*cellSize); ctx.stroke();
+            }
+
+            // Actualizare coordonate
+            const coordBadge = document.querySelector('.coord-badge');
+            if (coordBadge) {
+                coordBadge.innerText = `Pozitie curenta: X:${kang.x} Y:${10 - kang.y}`;
+            }
+
+            // Traseu parcurs (linie simpla albastra)
+            if(points.length > 1) {
+                ctx.save();
+                ctx.strokeStyle = '#3b82f6'; 
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(points[0].x * cellSize + cellSize/2, points[0].y * cellSize + cellSize/2);
+                for(let p of points) ctx.lineTo(p.x * cellSize + cellSize/2, p.y * cellSize + cellSize/2);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Tinta (cerc rosu simplu)
+            if (target) {
+                ctx.save();
+                ctx.fillStyle = isDuelRunning ? '#ef4444' : '#9ca3af';
+                ctx.beginPath(); 
+                ctx.arc(target.x * cellSize + cellSize/2, target.y * cellSize + cellSize/2, cellSize/6, 0, Math.PI*2); 
+                ctx.fill();
+                ctx.restore();
+            }
+            
+            // Robotul (triunghi portocaliu simplu)
+            ctx.save();
+            ctx.translate(kang.x * cellSize + cellSize/2, kang.y * cellSize + cellSize/2);
+            ctx.rotate((kang.dir * 90) * Math.PI / 180);
+            
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.moveTo(0, -cellSize/2.5);
+            ctx.lineTo(cellSize/3.5, cellSize/3.5);
+            ctx.lineTo(-cellSize/3.5, cellSize/3.5);
+            ctx.closePath();
+            ctx.fill();
+
+            // Punct de ghidaj alb
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, cellSize/12, cellSize/12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+
+        window.promptRepeat = () => {
+            const count = prompt("De cate ori doresti sa repeti?", "4");
+            if (count && !isNaN(count)) {
+                document.getElementById('codeArea').value += `REPETA ${count} [\n  \n]\n`;
+            }
+        };
+
+        window.punctZero = () => {
+            kang = { ...startPos, dir: 0 };
+            points = [{x: kang.x, y: kang.y}];
+            draw();
+        };
+
+        window.clearCode = () => { 
+            if(confirm("Stergi intregul algoritm?")) {
+                document.getElementById('codeArea').value = ""; 
+            }
+        };
+
+        async function executeTokens(tokens) {
+            let i = 0;
+            while(i < tokens.length && isDuelRunning) {
+                const cmd = tokens[i].toUpperCase();
+                if(cmd === 'PAS') {
+                    if(kang.dir === 0) kang.y--; else if(kang.dir === 1) kang.x++;
+                    else if(kang.dir === 2) kang.y++; else if(kang.dir === 3) kang.x--;
+                } else if(cmd === 'ROTIRE') {
+                    kang.dir = (kang.dir + 1) % 4;
+                } else if(cmd === 'REPETA') {
+                    i++; const count = parseInt(tokens[i]); i++;
+                    let block = [], brackets = 1;
+                    while(brackets > 0 && i < tokens.length) {
+                        i++;
+                        if(tokens[i] === '[') brackets++;
+                        if(tokens[i] === ']') brackets--;
+                        if(brackets > 0) block.push(tokens[i]);
+                    }
+                    for(let k=0; k<count; k++) await executeTokens([...block]);
+                }
+                points.push({x: kang.x, y: kang.y});
+                draw();
+                if(target && kang.x === target.x && kang.y === target.y) { finishDuel(); break; }
+                await new Promise(r => setTimeout(r, 250));
+                i++;
+            }
+        }
+
+        window.runCode = async () => {
+            const tokens = document.getElementById('codeArea').value.replace(/\[/g, ' [ ').replace(/\]/g, ' ] ').split(/\s+/).filter(t => t);
+            await executeTokens(tokens);
+        };
+
+        function finishDuel() {
+            clearInterval(timerInterval); isDuelRunning = false;
+            document.getElementById('finishMsg').classList.remove('hidden');
+            scores.push({ name: currentPlayerName, time: document.getElementById('timer').innerText, raw: Date.now() - timerStart });
+            scores.sort((a,b) => a.raw - b.raw);
+            localStorage.setItem('duelScores', JSON.stringify(scores));
+            updateLeaderboard();
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').classList.remove('opacity-40', 'cursor-not-allowed');
+        }
+
+        function updateLeaderboard() {
+            const lb = document.getElementById('leaderboard');
+            if(scores.length === 0) return;
+            lb.innerHTML = scores.slice(0, 10).map((s, i) => `
+                <div class="flex justify-between items-center bg-gray-50 border border-gray-200 rounded p-2 text-xs font-mono">
+                    <span class="text-blue-600 font-bold">#${i+1}</span>
+                    <span class="flex-1 ml-4 text-gray-700 font-medium">${s.name}</span>
+                    <span class="text-green-600 font-bold">${s.time}</span>
+                </div>
+            `).join('');
+        }
+
+        function resetApp() {
+            clearInterval(timerInterval);
+            isDuelRunning = false;
+            currentPlayerName = "";
+            target = null;
+            points = [];
+            kang = { x: 2, y: 8, dir: 0 };
+            document.getElementById('timer').innerText = "00:00.00";
+            document.getElementById('playerName').value = "";
+            document.getElementById('registrationZone').classList.remove('hidden');
+            document.getElementById('welcomeMsg').classList.add('hidden');
+            document.getElementById('finishMsg').classList.add('hidden');
+            document.getElementById('gameInstruction').classList.remove('hidden');
+            document.getElementById('gameInstruction').innerHTML = `
+                <h3 class="font-bold text-gray-800 mb-1">Ghid de utilizare</h3>
+                <p class="text-xs text-gray-600 leading-normal">
+                    Scrie numele tau in casuta de sus si apasa Salveaza, apoi apasa Start Joc pentru a incepe exercitiul.
+                </p>
+            `;
+            
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-40', 'cursor-not-allowed');
+            
+            enableControls(false);
+            draw();
+        }
+
+        window.addEventListener('load', initCanvas);
+        window.addEventListener('resize', initCanvas);
+        window.insert = (v) => { document.getElementById('codeArea').value += v + "\n"; };
+    </script>
+</body>
+</html>

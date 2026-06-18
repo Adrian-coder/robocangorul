@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoboCangurul v11.0 - Voice & Vision</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@500&display=swap');
+        
+        body { overflow: hidden; background-color: #f3f4f6; }
+        #canvasContainer {
+            background-image: radial-gradient(#94a3b8 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        textarea { font-family: 'Fira Code', monospace; line-height: 1.6; }
+        
+        .mode-btn-active { background-color: #4f46e5; color: white; border-color: #4f46e5; }
+        .mode-btn-inactive { background-color: white; color: #4b5563; border-color: #d1d5db; }
+        
+        /* Animații */
+        .scan-line { position: absolute; width: 100%; height: 2px; background: #00ff00; animation: scan 2s infinite linear; opacity: 0.5; }
+        @keyframes scan { 0% {top:0%} 100% {top:100%} }
+        
+        .mic-active { animation: pulse-red 1.5s infinite; background-color: #ef4444 !important; border-color: #ef4444 !important; }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+        .victory-modal { animation: pop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body class="flex flex-col h-screen text-slate-800">
+
+    <header class="bg-white border-b h-16 flex items-center justify-between px-6 shadow-sm z-20 shrink-0">
+   <div class="flex items-center gap-3 w-1/4">
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm w-12 h-12 flex items-center justify-center overflow-hidden">
+        <img src="img1.png" alt="Logo RoboCangurul" class="w-10 h-10 object-contain">
+    </div>
+    <div>
+        <h1 class="font-bold text-lg text-indigo-900 leading-tight">RoboCangurul</h1>
+        <p class="text-[10px] text-gray-500 font-bold uppercase">v11.0</p>
+    </div>
+</div>
+
+        <div class="flex bg-gray-100 p-1 rounded-lg border shadow-inner">
+            <button onclick="window.switchAppMode('LEARN')" id="btnAppLearn" class="flex items-center gap-2 px-6 py-2 rounded-md font-bold text-sm transition mode-btn-active"> ÎNVĂȚARE</button>
+            <button onclick="window.switchAppMode('GAME')" id="btnAppGame" class="flex items-center gap-2 px-6 py-2 rounded-md font-bold text-sm transition mode-btn-inactive"> JOC</button>
+             <a href="RoboCangurulDuel.html" class="bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 transition flex items-center gap-2">
+    <span>Robo-Arena </span>
+</a>
+            <a href="RoboCangurul3D.html" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition inline-flex items-center gap-2">
+    <span>Mod 3D</span>
+   
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+        <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+    </svg>
+</a>
+        </div>
+
+        <div class="flex items-center gap-4 w-1/4 justify-end">
+            <div class="flex flex-col items-end w-24">
+                <label class="text-[10px] font-bold text-gray-400 uppercase">Viteză</label>
+                <input type="range" id="speedRange" min="10" max="1000" value="300" class="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer accent-indigo-600">
+            </div>
+            <button onclick="window.saveCode()" class="bg-white border hover:bg-gray-50 text-gray-700 p-2 rounded shadow-sm transition" title="Salvează">💾</button>
+        </div>
+    </header>
+
+    <div class="bg-gray-50 border-b h-10 flex items-center justify-center px-4 shadow-inner">
+        <div id="controlsLearn" class="flex items-center gap-4 text-xs font-bold text-gray-600">
+            <span>Mărime teren:</span>
+            <select id="gridSizeSelect" onchange="window.resetApp()" class="bg-white border border-gray-300 rounded px-2 py-0.5 shadow-sm"><option value="10">10x10</option><option value="15" selected>15x15</option><option value="20">20x20</option></select>
+        </div>
+        <div id="controlsGame" class="hidden flex items-center gap-2 text-xs font-bold text-indigo-800">
+            <button onclick="window.prevLevel()" class="px-2 py-1 bg-white border rounded hover:bg-indigo-50">◀</button>
+            <span id="levelDisplay" class="bg-white px-4 py-1 rounded border border-indigo-200 shadow-sm w-32 text-center">Nivelul 1</span>
+            <button onclick="window.nextLevel()" class="px-2 py-1 bg-white border rounded hover:bg-indigo-50">▶</button>
+        </div>
+    </div>
+
+    <main class="flex-grow flex h-full overflow-hidden">
+        
+        <div class="w-1/3 min-w-[420px] bg-white border-r flex flex-col shadow-xl z-10 overflow-y-auto">
+            
+            <div class="p-2 bg-slate-50 border-b flex justify-between items-center px-4">
+                <span class="text-[10px] font-bold text-gray-400 uppercase">Input:</span>
+                <div class="flex bg-white rounded p-1 border shadow-sm scale-90 origin-right">
+                    <button onclick="window.setInputMode('AUTO')" id="btnInputAuto" class="px-3 py-1 rounded text-xs font-bold transition bg-indigo-600 text-white shadow">Cod</button>
+                    <button onclick="window.setInputMode('MANUAL')" id="btnInputManual" class="px-3 py-1 rounded text-xs font-bold transition text-gray-500 hover:bg-gray-100">Manual</button>
+                </div>
+            </div>
+
+            <div class="p-2 grid grid-cols-3 gap-2 bg-white border-b">
+                <button onclick="window.handleAction('Pas')" class="bg-white border-b-2 border-indigo-200 hover:bg-indigo-50 text-indigo-700 py-2 rounded font-bold text-xs transition active:translate-y-px"> PAS</button>
+                <button onclick="window.handleAction('Rotire')" class="bg-white border-b-2 border-purple-200 hover:bg-purple-50 text-purple-700 py-2 rounded font-bold text-xs transition active:translate-y-px"> ROTIRE</button>
+                <button onclick="window.handleAction('Salt')" class="bg-white border-b-2 border-emerald-200 hover:bg-emerald-50 text-emerald-700 py-2 rounded font-bold text-xs transition active:translate-y-px"> SALT</button>
+            </div>
+
+            <div id="advancedTools" class="bg-gray-100 p-2 border-b grid grid-cols-4 gap-1">
+                <button onclick="window.insertTemplate('repeta')" class="bg-white border hover:bg-blue-50 text-gray-700 py-1 rounded text-[10px] font-bold shadow-sm"> Repetă</button>
+                <button onclick="window.insertTemplate('daca')" class="bg-white border hover:bg-orange-50 text-gray-700 py-1 rounded text-[10px] font-bold shadow-sm"> Dacă</button>
+                <button onclick="window.insertTemplate('procedura')" class="bg-white border hover:bg-purple-50 text-gray-700 py-1 rounded text-[10px] font-bold shadow-sm"> Proc.</button>
+                <button onclick="window.insertTemplate('executa')" class="bg-white border hover:bg-pink-50 text-gray-700 py-1 rounded text-[10px] font-bold shadow-sm"> Exec.</button>
+            </div>
+
+            <div class="border-b border-indigo-100">
+                <button onclick="document.getElementById('aiPanel').classList.toggle('hidden')" class="w-full text-left px-4 py-1 bg-indigo-50 text-[10px] font-bold text-indigo-600 hover:bg-indigo-100 flex justify-between items-center">
+                    <span> PANOU AI </span> <span>▼</span>
+                </button>
+                
+                <div id="aiPanel" class="p-3 bg-slate-800 text-white">
+                    
+                    <div class="flex justify-between items-center mb-3 p-2 bg-slate-700 rounded border border-slate-600">
+                        <span class="text-[10px] text-yellow-400 font-bold"> VOCE</span>
+                        <button id="btnMic" onclick="window.toggleVoice()" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs font-bold transition border border-slate-500">
+                             MICROFON
+                        </button>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] text-green-400 font-bold"> GESTURI </span>
+                        <input type="checkbox" id="cameraToggle" onchange="window.toggleCamera()" class="accent-green-500">
+                    </div>
+                    <div id="cameraFeed" class="hidden relative h-32 bg-black rounded border border-gray-600 overflow-hidden mb-3">
+                        <video id="webcam" autoplay playsinline class="absolute inset-0 w-full h-full object-cover"></video>
+                        <div class="scan-line"></div>
+                        <div class="relative z-10 flex items-center justify-center h-full w-full bg-black/20">
+                            <p id="gestureStatus" class="text-[10px] text-white font-mono font-bold bg-black/50 px-2 rounded">
+                                Oprit
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-1">
+                        <input type="text" id="aiInput" placeholder="Chat: Desenează un pătrat..." class="flex-grow text-xs text-black p-1 rounded outline-none">
+                        <button onclick="window.askAI()" class="bg-indigo-600 hover:bg-indigo-500 px-2 rounded text-[10px] font-bold">GENEREAZĂ</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative flex-grow bg-[#1e1e1e] group min-h-[200px]">
+                <textarea id="codeEditor" spellcheck="false" 
+                class="w-full h-full p-4 bg-transparent text-[#d4d4d4] text-sm focus:outline-none resize-none"
+                placeholder="// Scrie cod aici sau folosește Vocea/Gesturile..."></textarea>
+                
+                <div id="manualOverlay" class="hidden absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 backdrop-blur-[1px]">
+                    <span class="text-white bg-black/60 px-4 py-2 rounded-lg font-bold text-sm border border-white/20">Mod Manual Activ</span>
+                </div>
+                <div id="errorBox" class="hidden absolute bottom-2 left-2 right-2 bg-red-600 text-white text-xs p-2 rounded shadow-lg"></div>
+            </div>
+
+            <div class="p-3 bg-white border-t flex gap-2 h-14 shrink-0">
+                <button onclick="window.runProgram()" id="btnRun" class="flex-grow bg-green-600 hover:bg-green-700 text-white rounded shadow font-bold text-sm transition flex items-center justify-center gap-2 active:scale-95"> EXECUTĂ</button>
+                <button onclick="window.resetApp()" class="w-12 bg-gray-100 hover:bg-gray-200 text-gray-700 border rounded font-bold flex items-center justify-center active:scale-95" title="Reset">⏹</button>
+                <button onclick="window.clearCode()" class="w-12 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded font-bold flex items-center justify-center active:scale-95" title="Șterge">Sterge</button>
+                
+            </div>
+        </div>
+
+        <div id="canvasContainer" class="flex-grow flex items-center justify-center bg-slate-100 relative">
+            <canvas id="gridCanvas" class="bg-white shadow-xl border border-gray-300 rounded"></canvas>
+            
+            <div class="absolute top-4 left-4 bg-white/90 px-2 py-1 rounded border text-[10px] font-mono text-gray-500 shadow-sm">
+                X:<b id="debugX">0</b> Y:<b id="debugY">0</b>
+            </div>
+
+            <div id="aiNotification" class="hidden absolute top-10 bg-indigo-900 text-white px-4 py-2 rounded-full shadow-xl text-sm font-bold flex items-center gap-2 animate-bounce">
+                <span>🤖</span> <span id="aiMsg">Mesaj AI</span>
+            </div>
+
+            <div id="victoryModal" class="hidden absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+                <div class="bg-white p-6 rounded-xl shadow-2xl text-center victory-modal max-w-xs">
+                    <div class="text-5xl mb-2">🌟</div>
+                    <h2 class="text-xl font-bold text-indigo-900">Nivel Complet!</h2>
+                    <button onclick="window.nextLevelAndClose()" class="mt-4 bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg">Continuă</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { GestureRecognizer, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+
+        // --- CONFIGURARE ---
+        const canvas = document.getElementById('gridCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let APP_MODE = 'LEARN'; 
+        let INPUT_MODE = 'AUTO'; 
+        let currentLevelIdx = 0; 
+        let CELL_SIZE = 30; 
+        let GRID_SIZE = 15; 
+        let speed = 300;
+        let kang = { x: 0, y: 0, dir: 1, trace: [] }; 
+        let isRunning = false; 
+        let abortController = false; 
+        let procedures = {};
+
+        // --- VARIABILE AI (VISION) ---
+        let gestureRecognizer;
+        let runningMode = "VIDEO";
+        let webcamRunning = false;
+        let lastVideoTime = -1;
+        let currentGesture = "";
+        let gestureStartTime = 0;
+        let lastActionTime = 0;
+        const REPEAT_DELAY = 1000; // 1 sec pt confirmare
+        const REPEAT_RATE = 2000;  // 2 sec pauza
+
+        // --- VARIABILE AI (VOICE) ---
+        let recognition;
+        let isVoiceOn = false;
+
+        // --- INIT ---
+        window.onload = function() {
+            window.clearCode();
+            window.switchAppMode('LEARN');
+            document.getElementById('speedRange').addEventListener('input', (e) => speed = 1010 - e.target.value);
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') if (INPUT_MODE === 'AUTO') window.runProgram();
+            });
+            window.addEventListener('resize', window.resizeCanvas);
+            
+            initVisionAI();
+            initVoiceAI();
+        };
+
+        // ------------------ 1. VISION AI (MediaPipe) ------------------
+        const initVisionAI = async () => {
+            const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+            gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
+                    delegate: "GPU"
+                },
+                runningMode: runningMode
+            });
+            const st = document.getElementById('gestureStatus');
+            if(st) st.innerText = "Camera Pregătită";
+        };
+
+        window.toggleCamera = async () => {
+            const feed = document.getElementById('cameraFeed');
+            const toggle = document.getElementById('cameraToggle');
+            const video = document.getElementById('webcam');
+            
+            if (toggle.checked) {
+                if (!gestureRecognizer) { alert("AI Vision încă se încarcă..."); toggle.checked = false; return; }
+                feed.classList.remove('hidden');
+                webcamRunning = true;
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                await video.play();
+                requestAnimationFrame(predictWebcam);
+            } else {
+                webcamRunning = false;
+                feed.classList.add('hidden');
+                if(video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+            }
+        };
+
+        async function predictWebcam() {
+            const video = document.getElementById('webcam');
+            const status = document.getElementById('gestureStatus');
+            if (!webcamRunning) return;
+
+            let now = Date.now();
+            if (video.currentTime !== lastVideoTime) {
+                lastVideoTime = video.currentTime;
+                if (video.videoWidth > 0) {
+                    const results = gestureRecognizer.recognizeForVideo(video, now);
+                    if (results.gestures.length > 0) {
+                        const gesture = results.gestures[0][0];
+                        if (gesture.score > 0.5) {
+                            processGesture(gesture.categoryName, now, status);
+                        }
+                    } else {
+                        resetGesture();
+                        status.innerText = "Caut mâna...";
+                        status.style.color = "white";
+                    }
+                }
+            }
+            if (webcamRunning) window.requestAnimationFrame(predictWebcam);
+        }
+
+        function processGesture(name, now, statusElem) {
+            if (name !== currentGesture) { currentGesture = name; gestureStartTime = now; }
+            statusElem.innerText = `Detectat: ${name}`;
+            statusElem.style.color = "#fbbf24"; 
+
+            if (now - gestureStartTime > REPEAT_DELAY) {
+                if (lastActionTime === 0 || (now - lastActionTime > REPEAT_RATE)) {
+                    statusElem.style.color = "#4ade80"; 
+                    executeCommand(name, 'GEST');
+                    lastActionTime = now;
+                } else {
+                    statusElem.innerText = "Așteaptă...";
+                    statusElem.style.color = "#9ca3af";
+                }
+            }
+        }
+
+        function resetGesture() { currentGesture = ""; gestureStartTime = 0; }
+
+        // ------------------ 2. VOICE AI (Web Speech API) ------------------
+        const initVoiceAI = () => {
+            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'ro-RO';
+                recognition.continuous = true;
+                recognition.interimResults = false;
+
+                recognition.onresult = (event) => {
+                    const last = event.results.length - 1;
+                    const command = event.results[last][0].transcript.toLowerCase().trim();
+                    showNotification(`Voce: "${command}"`);
+                    processVoiceCommand(command);
+                };
+
+                recognition.onend = () => { if (isVoiceOn) recognition.start(); };
+            } else {
+                document.getElementById('btnMic').innerText = "❌ Browser Incompatibil";
+            }
+        };
+
+        window.toggleVoice = () => {
+            const btn = document.getElementById('btnMic');
+            if (!isVoiceOn) {
+                recognition.start();
+                isVoiceOn = true;
+                btn.innerText = "🛑 STOP MICROFON";
+                btn.classList.add('mic-active');
+            } else {
+                recognition.stop();
+                isVoiceOn = false;
+                btn.innerText = "🎙️ START MICROFON";
+                btn.classList.remove('mic-active');
+            }
+        };
+
+        function processVoiceCommand(cmd) {
+            // MAPPING PENTRU VOCE
+            if (cmd.includes("pas")) executeCommand("Closed_Fist", 'VOCE');
+            else if (cmd.includes("rotire") || cmd.includes("rotește")) executeCommand("Open_Palm", 'VOCE');
+            else if (cmd.includes("salt") || cmd.includes("sari")) executeCommand("Victory", 'VOCE');
+            else if (cmd.includes("start") || cmd.includes("execută")) executeCommand("Thumb_Up", 'VOCE');
+            else if (cmd.includes("șterge") || cmd.includes("sterge")) executeCommand("Thumb_Down", 'VOCE');
+        }
+
+        // --- COMMAND CENTER (Vision + Voice) ---
+        function executeCommand(type, source) {
+            let txt = "";
+            let action = null;
+
+            // 1. PUMN = PAS
+            if (type === "Closed_Fist") { txt="PAS ⬆"; action = () => window.handleAction('Pas'); }
+            // 2. PALMA = ROTIRE
+            else if (type === "Open_Palm") { txt="ROTIRE ↻"; action = () => window.handleAction('Rotire'); }
+            // 3. VICTORY = SALT
+            else if (type === "Victory") { txt="SALT 🐇"; action = () => window.handleAction('Salt'); }
+            // 4. LIKE = START
+            else if (type === "Thumb_Up") { 
+                txt="EXECUTĂ! ▶"; 
+                action = () => { window.runProgram(); speak("Pornesc la drum!"); }; 
+            }
+            // 5. DISLIKE = RESET
+            else if (type === "Thumb_Down") { 
+                txt="RESET TOTAL! 🧹"; 
+                action = () => { window.clearCode(); window.resetApp(); speak("Am șters tot."); }; 
+            }
+
+            if (action) {
+                showNotification(`${source}: ${txt}`);
+                action();
+            }
+        }
+
+        function showNotification(msg) {
+            const n = document.getElementById('aiMsg');
+            const box = document.getElementById('aiNotification');
+            n.innerText = msg;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 2000);
+        }
+
+        function speak(text) {
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'ro-RO';
+            window.speechSynthesis.speak(u);
+        }
+
+        // --- INSERT FIX ---
+        window.insertText = (text) => {
+            const editor = document.getElementById('codeEditor');
+            let code = editor.value;
+            const endIdx = code.lastIndexOf("END");
+            if (endIdx === -1) { editor.value += "\n" + text; return; }
+            let beforeEnd = code.substring(0, endIdx);
+            if (!beforeEnd.endsWith('\n')) beforeEnd += "\n";
+            editor.value = beforeEnd + text + "\n" + code.substring(endIdx);
+            editor.scrollTop = editor.scrollHeight;
+        };
+
+        // --- STANDARD LOGIC ---
+        window.handleAction = (act) => {
+            if (INPUT_MODE === 'MANUAL') {
+                if (act === 'Pas') window.move('pas');
+                if (act === 'Rotire') { kang.dir = (kang.dir + 1) % 4; window.draw(); }
+                if (act === 'Salt') window.move('salt');
+            } else window.insertText(act);
+        };
+
+        const LEVELS = [
+            { id: 1, grid: 8, start: {x: 0, y: 0, dir: 1}, goal: {x: 4, y: 0}, walls: [] },
+            { id: 2, grid: 8, start: {x: 0, y: 0, dir: 1}, goal: {x: 2, y: 2}, walls: [] },
+            { id: 3, grid: 10, start: {x: 0, y: 0, dir: 2}, goal: {x: 4, y: 4}, walls: [{x:0,y:1},{x:1,y:1},{x:2,y:1},{x:2,y:2}] },
+            { id: 4, grid: 12, start: {x: 1, y: 1, dir: 1}, goal: {x: 8, y: 8}, walls: [{x:4,y:4},{x:4,y:5},{x:4,y:6},{x:5,y:4}] },
+            { id: 5, grid: 12, start: {x: 0, y: 5, dir: 1}, goal: {x: 11, y: 5}, walls: [{x:5,y:0},{x:5,y:1},{x:5,y:2},{x:5,y:3},{x:5,y:4},{x:5,y:6},{x:5,y:7},{x:5,y:8},{x:5,y:9},{x:5,y:10}] },
+            { id: 6, grid: 15, start: {x: 1, y: 1, dir: 2}, goal: {x: 13, y: 1}, walls: [{x:1,y:3},{x:2,y:3},{x:3,y:3},{x:4,y:3},{x:5,y:3},{x:6,y:3},{x:7,y:3},{x:7,y:2},{x:7,y:1}] },
+            { id: 7, grid: 15, start: {x: 7, y: 7, dir: 0}, goal: {x: 7, y: 0}, walls: [{x:6,y:5},{x:7,y:5},{x:8,y:5},{x:5,y:3},{x:9,y:3}] },
+            { id: 8, grid: 15, start: {x: 0, y: 0, dir: 1}, goal: {x: 14, y: 14}, walls: [{x:2,y:0},{x:2,y:1},{x:2,y:2},{x:0,y:4},{x:1,y:4},{x:2,y:4},{x:3,y:4},{x:6,y:6},{x:7,y:6},{x:8,y:6},{x:10,y:10},{x:11,y:10},{x:12,y:10}] },
+            { id: 9, grid: 15, start: {x: 0, y: 0, dir: 1}, goal: {x: 0, y: 4}, walls: [{x:1,y:0},{x:2,y:0},{x:3,y:0},{x:3,y:1},{x:3,y:2},{x:2,y:2},{x:1,y:2},{x:1,y:3},{x:1,y:4}] },
+            { id: 10, grid: 15, start: {x: 7, y: 14, dir: 0}, goal: {x: 7, y: 0}, walls: [{x:0,y:7},{x:1,y:7},{x:2,y:7},{x:3,y:7},{x:4,y:7},{x:5,y:7},{x:9,y:7},{x:10,y:7},{x:11,y:7},{x:12,y:7},{x:13,y:7},{x:14,y:7}] },
+            { id: 11, grid: 20, start: {x: 0, y: 0, dir: 1}, goal: {x: 19, y: 19}, walls: generateLine(5,0,5,15) },
+            { id: 12, grid: 20, start: {x: 10, y: 10, dir: 0}, goal: {x: 0, y: 0}, walls: generateBox(8,8,4,4) },
+            { id: 13, grid: 20, start: {x: 0, y: 10, dir: 1}, goal: {x: 20, y: 10}, walls: generateZigZag(20) },
+            { id: 14, grid: 15, start: {x: 2, y: 2, dir: 1}, goal: {x: 12, y: 12}, walls: [{x:5,y:5},{x:6,y:5},{x:7,y:5},{x:8,y:5},{x:9,y:5},{x:5,y:6},{x:5,y:7},{x:5,y:8},{x:5,y:9}] },
+            { id: 15, grid: 20, start: {x: 9, y: 9, dir: 0}, goal: {x: 0, y: 0}, walls: [] }
+        ];
+
+        function generateLine(x,y,len,v) { let a=[]; for(let i=0;i<len;i++) a.push(v?{x:x,y:y+i}:{x:x+i,y:y}); return a; }
+        function generateBox(x,y,w,h) { let a=[]; for(let i=0;i<w;i++){a.push({x:x+i,y:y});a.push({x:x+i,y:y+h});} for(let i=0;i<h;i++){a.push({x:x,y:y+i});if(i!==h/2)a.push({x:x+w,y:y+i});} return a; }
+        function generateZigZag(s) { let a=[]; for(let i=1;i<s;i+=2) a.push({x:i,y:10}); return a; }
+
+        window.switchAppMode = (mode) => {
+            APP_MODE = mode;
+            if (mode === 'LEARN') {
+                document.getElementById('btnAppLearn').classList.replace('mode-btn-inactive', 'mode-btn-active');
+                document.getElementById('btnAppGame').classList.replace('mode-btn-active', 'mode-btn-inactive');
+                document.getElementById('controlsLearn').classList.remove('hidden');
+                document.getElementById('controlsGame').classList.add('hidden');
+                window.resetApp();
+            } else {
+                document.getElementById('btnAppGame').classList.replace('mode-btn-inactive', 'mode-btn-active');
+                document.getElementById('btnAppLearn').classList.replace('mode-btn-active', 'mode-btn-inactive');
+                document.getElementById('controlsGame').classList.remove('hidden');
+                document.getElementById('controlsLearn').classList.add('hidden');
+                window.loadLevel(0);
+            }
+        };
+
+        window.loadLevel = (idx) => {
+            if (idx < 0) idx = 0; if (idx >= LEVELS.length) idx = LEVELS.length - 1;
+            currentLevelIdx = idx;
+            document.getElementById('levelDisplay').innerText = `Nivelul ${LEVELS[idx].id}`;
+            document.getElementById('victoryModal').classList.add('hidden');
+            window.resetApp();
+        };
+        window.nextLevel = () => window.loadLevel(currentLevelIdx + 1);
+        window.prevLevel = () => window.loadLevel(currentLevelIdx - 1);
+        window.nextLevelAndClose = () => window.loadLevel(currentLevelIdx + 1);
+
+        window.resetApp = () => {
+            abortController = true;
+            document.getElementById('errorBox').classList.add('hidden');
+            if (APP_MODE === 'LEARN') {
+                GRID_SIZE = parseInt(document.getElementById('gridSizeSelect').value);
+                kang = { x: 0, y: 0, dir: 1, trace: [] };
+            } else {
+                const lvl = LEVELS[currentLevelIdx];
+                GRID_SIZE = lvl.grid;
+                kang = { ...lvl.start, trace: [] };
+            }
+            window.resizeCanvas();
+        };
+
+        window.resizeCanvas = () => {
+            const c = document.getElementById('canvasContainer');
+            const maxW = c.clientWidth - 40; const maxH = c.clientHeight - 40;
+            const g = APP_MODE === 'GAME' ? LEVELS[currentLevelIdx].grid + 1 : GRID_SIZE;
+            CELL_SIZE = Math.floor(Math.min(maxW, maxH) / g);
+            if(CELL_SIZE < 15) CELL_SIZE = 15;
+            canvas.width = g * CELL_SIZE; canvas.height = g * CELL_SIZE;
+            window.draw();
+        };
+
+        window.draw = () => {
+            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1; ctx.beginPath();
+            const g = APP_MODE === 'GAME' ? LEVELS[currentLevelIdx].grid : GRID_SIZE;
+            for(let i=0; i<=g; i++) { ctx.moveTo(i*CELL_SIZE,0); ctx.lineTo(i*CELL_SIZE,canvas.height); ctx.moveTo(0,i*CELL_SIZE); ctx.lineTo(canvas.width,i*CELL_SIZE); }
+            ctx.stroke();
+
+            if (APP_MODE === 'GAME') {
+                const lvl = LEVELS[currentLevelIdx];
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.2)'; ctx.fillRect(lvl.goal.x*CELL_SIZE, lvl.goal.y*CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                ctx.font = `${CELL_SIZE*0.6}px Arial`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("🏁", lvl.goal.x*CELL_SIZE+CELL_SIZE/2, lvl.goal.y*CELL_SIZE+CELL_SIZE/2);
+                ctx.fillStyle = '#ef4444'; lvl.walls.forEach(w => ctx.fillRect(w.x*CELL_SIZE+2, w.y*CELL_SIZE+2, CELL_SIZE-4, CELL_SIZE-4));
+            }
+
+            ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = Math.max(3, CELL_SIZE/6); ctx.lineCap='round';
+            if(kang.trace.length>0) {
+                ctx.beginPath();
+                kang.trace.forEach(s => { ctx.moveTo(s.x1*CELL_SIZE+CELL_SIZE/2, s.y1*CELL_SIZE+CELL_SIZE/2); ctx.lineTo(s.x2*CELL_SIZE+CELL_SIZE/2, s.y2*CELL_SIZE+CELL_SIZE/2); });
+                ctx.stroke();
+            }
+            window.drawRobot(kang.x, kang.y, kang.dir);
+            document.getElementById('debugX').innerText = kang.x; document.getElementById('debugY').innerText = kang.y;
+        };
+
+        window.drawRobot = (x, y, dir) => {
+            const cx = x*CELL_SIZE+CELL_SIZE/2; const cy = y*CELL_SIZE+CELL_SIZE/2; const s = CELL_SIZE*0.7;
+            ctx.save(); ctx.translate(cx, cy); ctx.rotate(dir*90*Math.PI/180);
+            ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.moveTo(0,-s/2+2); ctx.lineTo(s/2+2,s/2+2); ctx.lineTo(0,s/3+2); ctx.lineTo(-s/2-2,s/2+2); ctx.fill();
+            ctx.fillStyle = '#f97316'; ctx.beginPath(); ctx.moveTo(0,-s/2); ctx.lineTo(s/2,s/2); ctx.lineTo(0,s/3); ctx.lineTo(-s/2,s/2); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0,0,s/5,0,Math.PI*2); ctx.fill();
+            ctx.restore();
+        };
+
+        window.askAI = async () => {
+            const input = document.getElementById('aiInput').value.toLowerCase();
+            if(!input) return;
+            let code = "// AI: Mers Simplu\nPas\nPas";
+            if(input.includes("patrat")) code = "// AI: Pătrat\nRepeta 4 [\n  Pas\n  Rotire\n]";
+            if(input.includes("steag")) code = "// AI: Caută\nDaca MARGINE [\n  Rotire\n] Altfel [\n  Pas\n]";
+            document.getElementById('codeEditor').value = "BEGIN\n" + code + "\nEND";
+            const n = document.getElementById('aiNotification');
+            n.classList.remove('hidden'); setTimeout(()=>n.classList.add('hidden'), 2000);
+        };
+
+        window.setInputMode = (mode) => {
+            INPUT_MODE = mode;
+            const ed = document.getElementById('codeEditor');
+            const ov = document.getElementById('manualOverlay');
+            if(mode === 'AUTO') {
+                ed.readOnly = false; ov.classList.add('hidden');
+                document.getElementById('btnInputAuto').classList.replace('text-gray-500','bg-indigo-600');
+                document.getElementById('btnInputAuto').classList.add('text-white');
+                document.getElementById('btnInputManual').classList.replace('bg-indigo-600','text-gray-500');
+                document.getElementById('btnInputManual').classList.remove('text-white');
+            } else {
+                ed.readOnly = true; ov.classList.remove('hidden');
+                document.getElementById('btnInputManual').classList.replace('text-gray-500','bg-indigo-600');
+                document.getElementById('btnInputManual').classList.add('text-white');
+                document.getElementById('btnInputAuto').classList.replace('bg-indigo-600','text-gray-500');
+                document.getElementById('btnInputAuto').classList.remove('text-white');
+            }
+        };
+
+        window.insertTemplate = (type) => {
+             let t = ""; let off = 0;
+             if (type === 'repeta') { t = "Repeta 4 [\n  \n]"; off = -2; }
+             if (type === 'daca') { t = "Daca MARGINE [\n  Rotire\n] Altfel [\n  Pas\n]"; off = 0; }
+             if (type === 'procedura') { t = "\nPROCEDURA Nume [\n  Pas\n]\n"; off = -8; }
+             if (type === 'executa') { t = "Executa Nume"; off = 0; }
+             window.insertText(t);
+        };
+
+        window.clearCode = () => { document.getElementById('codeEditor').value = "BEGIN\n\nEND"; };
+        window.saveCode = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([document.getElementById('codeEditor').value], {type: "text/plain"})); a.download = "cangur.txt"; a.click(); };
+
+        window.move = (type) => {
+            if (canMove()) {
+                let nx = kang.x, ny = kang.y;
+                if (kang.dir === 0) ny--; if (kang.dir === 1) nx++; if (kang.dir === 2) ny++; if (kang.dir === 3) nx--;
+                if (type === 'pas') kang.trace.push({x1:kang.x, y1:kang.y, x2:nx, y2:ny});
+                kang.x = nx; kang.y = ny; window.draw(); checkWin();
+            } else { canvas.style.borderColor = 'red'; setTimeout(() => canvas.style.borderColor = '#d1d5db', 200); }
+        };
+
+        function canMove() {
+            let nx = kang.x, ny = kang.y;
+            if (kang.dir === 0) ny--; if (kang.dir === 1) nx++; if (kang.dir === 2) ny++; if (kang.dir === 3) nx--;
+            const lim = APP_MODE === 'GAME' ? LEVELS[currentLevelIdx].grid : GRID_SIZE;
+            if (nx < 0 || nx >= lim || ny < 0 || ny >= lim) return false;
+            if (APP_MODE === 'GAME' && LEVELS[currentLevelIdx].walls.some(w => w.x === nx && w.y === ny)) return false;
+            return true;
+        }
+
+        function checkWin() {
+            if (APP_MODE !== 'GAME') return false;
+            const lvl = LEVELS[currentLevelIdx];
+            if (kang.x === lvl.goal.x && kang.y === lvl.goal.y) {
+                document.getElementById('victoryModal').classList.remove('hidden');
+                abortController = true; return true;
+            } return false;
+        }
+
+        window.runProgram = async () => {
+            if(isRunning) return;
+            if(APP_MODE==='GAME') { kang = {...LEVELS[currentLevelIdx].start, trace:[]}; window.draw(); }
+            procedures={}; abortController=false; document.getElementById('errorBox').classList.add('hidden');
+            const btn=document.getElementById('btnRun');
+            try {
+                const code=document.getElementById('codeEditor').value;
+                const tokens=code.replace(/\/\/.*$/gm,'').replace(/\[/g,' [ ').replace(/\]/g,' ] ').split(/\s+/).filter(t=>t.length>0);
+                if(!tokens.includes('BEGIN') || !tokens.includes('END')) throw new Error("Lipseste BEGIN/END");
+                let main=[], i=0;
+                while(i<tokens.length) {
+                    if(tokens[i].toUpperCase()==='PROCEDURA') { i++; const n=tokens[i].toUpperCase(); i++; const b=extractBlock(tokens,i+1); procedures[n]=b.c; i=b.i; } 
+                    else { main.push(tokens[i]); i++; }
+                }
+                const s=main.findIndex(t=>t.toUpperCase()==='BEGIN'); const e=main.findIndex(t=>t.toUpperCase()==='END');
+                isRunning=true; btn.innerText="⏳ ...";
+                await executeTokens(main.slice(s+1,e));
+                if(!abortController) btn.innerText="▶ EXECUTĂ";
+            } catch(e) { document.getElementById('errorBox').innerText = e.message; document.getElementById('errorBox').classList.remove('hidden'); btn.innerText="▶ EXECUTĂ"; }
+            isRunning=false;
+        };
+
+        async function executeTokens(tokens) {
+            let i=0;
+            while(i<tokens.length) {
+                if(abortController) return;
+                const c=tokens[i].toUpperCase();
+                if(c==='PAS') { window.move('pas'); await sleep(speed); }
+                else if(c==='ROTIRE') { kang.dir=(kang.dir+1)%4; window.draw(); await sleep(speed); }
+                else if(c==='SALT') { window.move('salt'); await sleep(speed); }
+                else if(c==='REPETA') { i++; const cnt=parseInt(tokens[i]); i++; const b=extractBlock(tokens,i+1); for(let k=0;k<cnt;k++) await executeTokens([...b.c]); i=b.i-1; }
+                else if(c==='EXECUTA') { i++; const n=tokens[i].toUpperCase(); if(procedures[n]) await executeTokens([...procedures[n]]); }
+                else if(c==='DACA') {
+                    i++; i++; const bt=extractBlock(tokens,i+1); i=bt.i; let bf={c:[],i:i};
+                    if(i<tokens.length && tokens[i].toUpperCase()==='ALTFEL') { i++; bf=extractBlock(tokens,i+1); i=bf.i; }
+                    if (!canMove()) await executeTokens([...bt.c]); else await executeTokens([...bf.c]);
+                    i--;
+                } i++;
+            }
+        }
+
+        function extractBlock(t,idx) { let d=1,c=[],i=idx; while(d>0 && i<t.length) { if(t[i]==='[') d++; if(t[i]===']') d--; if(d>0) c.push(t[i]); i++; } return {c:c,i:i}; }
+        function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+    </script>
+</body>
+</html>

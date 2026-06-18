@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoboCangurul 3D - Profesional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        
+        body { 
+            margin: 0; padding: 0; overflow: hidden; 
+            background-color: #0f172a; 
+            font-family: 'Inter', sans-serif; 
+        }
+        
+        /* Design Plat - Fără Neon */
+        .flat-panel { 
+            background: #1e293b; 
+            border: 1px solid #334155; 
+            pointer-events: auto; 
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-flat {
+            background: #334155;
+            border: 1px solid #475569;
+            color: #f1f5f9;
+            font-weight: 600;
+            font-size: 11px;
+            transition: all 0.15s ease-in-out;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-flat:hover { background: #475569; border-color: #64748b; }
+        .btn-flat:active { transform: scale(0.97); }
+
+        /* Culori Mate pentru Axe */
+        .btn-red { background: #991b1b; border-color: #b91c1c; color: #fecaca; }
+        .btn-green { background: #166534; border-color: #15803d; color: #dcfce7; }
+        .btn-blue { background: #1e3a8a; border-color: #1d4ed8; color: #dbeafe; }
+        .btn-purple { background: #581c87; border-color: #6b21a8; color: #f3e8ff; }
+        .btn-primary { background: #4f46e5; border-color: #6366f1; color: #ffffff; }
+
+        textarea { 
+            font-family: 'JetBrains Mono', monospace; 
+            font-size: 13px; 
+            line-height: 1.5;
+            background: #020617 !important;
+        }
+
+        #canvas3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        #ui-layer { position: relative; z-index: 10; width: 100%; height: 100%; pointer-events: none; }
+        .active-mode { background: #4f46e5 !important; border-color: #6366f1 !important; }
+    </style>
+</head>
+<body>
+
+    <div id="canvas3d"></div>
+
+    <div id="ui-layer" class="p-6 flex flex-col justify-between h-screen">
+        
+        <div class="flex justify-between items-start">
+            <div class="flat-panel p-4 rounded-xl">
+                <h1 class="text-white font-bold text-sm tracking-tight">RoboCangurul 3D</h1>
+                <p id="mode-label" class="text-indigo-400 text-[10px] uppercase font-bold mt-0.5">Mod desen</p>
+            </div>
+
+            <div class="flat-panel p-1.5 rounded-xl flex gap-1.5">
+                <button onclick="window.setMode('draw')" id="btn-draw" class="btn-flat px-4 py-2 rounded-lg active-mode bg-transparent">Mod Desen</button>
+                <button onclick="window.setMode('game')" id="btn-game" class="btn-flat px-4 py-2 rounded-lg bg-transparent">Game Mode</button>
+                <button onclick="window.spawnTarget()" id="btn-new-mission" class="btn-flat px-4 py-2 rounded-lg text-emerald-400 border border-emerald-500/20 bg-emerald-950/30 text-xs font-bold hidden">Misiune nouă</button>
+                <a href="Cangorulv1.html" class="btn-flat px-4 py-2 rounded-lg text-slate-300 text-xs font-medium hover:bg-slate-700 flex items-center justify-center">Înapoi la 2D</a>
+            </div>
+        </div>
+
+        <div class="w-96 space-y-4">
+            
+            <div id="target-info" class="flat-panel p-4 rounded-xl hidden">
+                <p class="text-slate-400 text-[10px] uppercase font-bold mb-2 tracking-wider">Coordonate Țintă</p>
+                <div class="grid grid-cols-3 gap-2 text-center text-white font-mono text-xs">
+                    <div class="bg-slate-900 py-2 rounded">X: <b id="targX">0</b></div>
+                    <div class="bg-slate-900 py-2 rounded">Y: <b id="targY">0</b></div>
+                    <div class="bg-slate-900 py-2 rounded">Z: <b id="targZ">0</b></div>
+                </div>
+            </div>
+
+            <div class="flat-panel p-5 rounded-xl space-y-4">
+                <div class="space-y-2">
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="window.insert('PASX')" class="btn-flat btn-red py-3">PASX</button>
+                        <button onclick="window.insert('PASY')" class="btn-flat btn-green py-3">PASY</button>
+                        <button onclick="window.insert('PASZ')" class="btn-flat btn-blue py-3">PASZ</button>
+                        <button onclick="window.insert('ROTIRE')" class="btn-flat btn-purple py-3">ROTIRE</button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="window.insert('PASX-')" class="btn-flat btn-red opacity-80 py-2">PASX-</button>
+                        <button onclick="window.insert('PASY-')" class="btn-flat btn-green opacity-80 py-2">PASY-</button>
+                        <button onclick="window.insert('PASZ-')" class="btn-flat btn-blue opacity-80 py-2">PASZ-</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col">
+                    <div class="bg-slate-900 px-3 py-1.5 rounded-t-lg border-t border-x border-slate-700 text-[10px] font-mono text-slate-500">
+                        
+                    </div>
+                    <textarea id="codeArea" class="w-full h-32 p-3 rounded-b-lg text-slate-100 border border-slate-700 outline-none resize-none" ></textarea>
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="window.runCode()" class="flex-grow btn-flat btn-primary py-3 font-bold uppercase tracking-wider">Execută cod</button>
+                    <button onclick="window.resetAll()" class="px-5 btn-flat bg-slate-700">Șterge</button>
+                </div>
+            </div>
+
+            <div class="flat-panel p-3 rounded-xl flex justify-around text-[11px] font-mono text-slate-400">
+                <span>X: <b id="valX" class="text-red-400">0</b></span>
+                <span>Y: <b id="valY" class="text-emerald-400">0</b></span>
+                <span>Z: <b id="valZ" class="text-blue-400">0</b></span>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        let scene, camera, renderer, kangaroo, line, target, controls;
+        let points = [new THREE.Vector3(0, 0, 0)];
+        let currentPos = { x: 0, y: 0, z: 0 };
+        let targetPos = { x: 3, y: 0, z: -2 };
+        let currentMode = 'draw';
+        let currentRotation = 0;
+
+        function init() {
+            const container = document.getElementById('canvas3d');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(10, 10, 15);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            dirLight.position.set(5, 10, 7);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // Grid discret
+            const grid = new THREE.GridHelper(20, 20, 0x334155, 0x1e293b);
+            scene.add(grid);
+
+            // --- AXE PERSONALIZATE (Săgeți vizibile în nuanțe mate) ---
+            const arrowLen = 6;
+            const headLen = 0.8;
+            const headWidth = 0.5;
+
+            scene.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0,0,0), arrowLen, 0x991b1b, headLen, headWidth)); // X
+            scene.add(new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0,0,0), arrowLen, 0x166534, headLen, headWidth)); // Y
+            scene.add(new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0,0,0), arrowLen, 0x1e3a8a, headLen, headWidth)); // Z
+
+            // ROBOTUL
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.5, 4, 8), new THREE.MeshStandardMaterial({ color: 0xe07a34 }));
+            body.position.y = 0.4;
+            body.castShadow = true;
+            const nose = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.25), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            nose.position.set(0, 0.7, -0.2);
+            group.add(body, nose);
+            kangaroo = group;
+            scene.add(kangaroo);
+
+            // TRASEUL
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x6366f1, linewidth: 3 }));
+            scene.add(line);
+
+            // TINTA (Mingea)
+            target = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 32), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+            target.visible = false;
+            scene.add(target);
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(controls) controls.update();
+            if(target && target.visible) {
+                target.position.y = targetPos.y + 0.45 + Math.sin(Date.now() * 0.003) * 0.1;
+            }
+            renderer.render(scene, camera);
+        }
+
+        window.setMode = (mode) => {
+            currentMode = mode;
+            target.visible = mode === 'game';
+            
+            const label = document.getElementById('mode-label');
+            if(label) label.innerText = mode === 'game' ? "Game Mode" : "Mod desen";
+            
+            const btnMission = document.getElementById('btn-new-mission');
+            if(btnMission) btnMission.classList.toggle('hidden', mode !== 'game');
+            
+            const targetInfo = document.getElementById('target-info');
+            if(targetInfo) targetInfo.classList.toggle('hidden', mode !== 'game');
+
+            document.getElementById('btn-draw').classList.toggle('active-mode', mode !== 'game');
+            document.getElementById('btn-game').classList.toggle('active-mode', mode === 'game');
+            
+            if(mode === 'game') window.spawnTarget();
+            else { window.resetAll(); }
+        };
+
+        window.spawnTarget = () => {
+            targetPos.x = Math.floor(Math.random() * 8) - 4;
+            targetPos.y = Math.floor(Math.random() * 3);
+            targetPos.z = Math.floor(Math.random() * 8) - 4;
+            target.position.set(targetPos.x, targetPos.y + 0.4, targetPos.z);
+            document.getElementById('targX').innerText = targetPos.x;
+            document.getElementById('targY').innerText = targetPos.y;
+            document.getElementById('targZ').innerText = targetPos.z;
+        };
+
+        window.executeMove = async (axis, distance) => {
+            if (axis === 'X') currentPos.x += distance;
+            if (axis === 'Y') currentPos.y += distance;
+            if (axis === 'Z') currentPos.z += distance;
+
+            kangaroo.position.set(currentPos.x, currentPos.y, currentPos.z);
+            points.push(new THREE.Vector3(currentPos.x, currentPos.y, currentPos.z));
+            line.geometry.setFromPoints(points);
+
+            document.getElementById('valX').innerText = currentPos.x;
+            document.getElementById('valY').innerText = currentPos.y;
+            document.getElementById('valZ').innerText = currentPos.z;
+
+            if(currentMode === 'game' && currentPos.x === targetPos.x && currentPos.y === targetPos.y && currentPos.z === targetPos.z) {
+                setTimeout(() => alert("Misiune reușită! 🎉"), 100);
+            }
+        };
+
+        window.runCode = async () => {
+            const code = document.getElementById('codeArea').value.toUpperCase();
+            const tokens = code.split(/\s+/).filter(t => t);
+            for (let token of tokens) {
+                const isNegative = token.includes('-');
+                const cleanToken = token.replace('-', '');
+                const distance = isNegative ? -1 : 1;
+
+                if (cleanToken.endsWith('X')) await window.executeMove('X', distance);
+                else if (cleanToken.endsWith('Y')) await window.executeMove('Y', distance);
+                else if (cleanToken.endsWith('Z')) await window.executeMove('Z', distance);
+                else if (cleanToken === 'ROTIRE') {
+                    currentRotation += Math.PI / 2;
+                    kangaroo.rotation.y = -currentRotation;
+                }
+                await new Promise(r => setTimeout(r, 450));
+            }
+        };
+
+        window.insert = (val) => { document.getElementById('codeArea').value += val + "\n"; };
+
+        window.resetAll = () => {
+            currentPos = { x: 0, y: 0, z: 0 };
+            currentRotation = 0;
+            points = [new THREE.Vector3(0, 0, 0)];
+            line.geometry.setFromPoints(points);
+            kangaroo.position.set(0, 0, 0);
+            kangaroo.rotation.y = 0;
+            document.getElementById('codeArea').value = "";
+            document.getElementById('valX').innerText = "0"; 
+            document.getElementById('valY').innerText = "0"; 
+            document.getElementById('valZ').innerText = "0";
+        };
+
+        window.addEventListener('load', init);
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
